@@ -1,5 +1,6 @@
 import type { GenLayerChain, GenLayerClient, TransactionHash } from "genlayer-js/types";
-import { TransactionHashVariant, TransactionStatus } from "genlayer-js/types";
+import { CalldataAddress, TransactionHashVariant, TransactionStatus } from "genlayer-js/types";
+import { getAddress, hexToBytes } from "viem";
 import { PROTOCOL_COURT_ADDRESS, readClient } from "./config";
 import type {
   Case,
@@ -149,6 +150,17 @@ export const addClause = (
   sourceRef: string,
 ) => write(client, "add_clause", [commitmentId, citation, title, text, sourceRef]);
 
+/** GenLayer's calldata format has a dedicated address wire type -- a plain
+ * hex string sent as an argument gets encoded as generic text instead, and
+ * the contract's Address parser rejects it. `CalldataAddress` (from
+ * genlayer-js/types) is how the SDK expects a caller to mark a value as an
+ * on-chain Address: raw 20 bytes, not a "0x…" string. Use for every
+ * Address-typed parameter this contract's write methods accept from a
+ * caller (currently only `respondent` on file_case). */
+function toCalldataAddress(hex: string): CalldataAddress {
+  return new CalldataAddress(hexToBytes(getAddress(hex)));
+}
+
 /** Payable: `valueAtto` must equal FILING_BOND_ATTO exactly (see
  * lib/genlayer/config.ts), or the contract reverts with
  * EXPECTED:FILING_BOND_MISMATCH. */
@@ -171,7 +183,7 @@ export const fileCase = (
       protocolId,
       commitmentId,
       clauseId,
-      respondent,
+      toCalldataAddress(respondent),
       questionPresented,
       disputedActRef,
       disputedActSummary,
