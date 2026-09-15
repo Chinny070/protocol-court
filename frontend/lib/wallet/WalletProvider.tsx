@@ -104,6 +104,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const connect = useCallback(async () => {
+    if (address) return; // already connected -- re-running the chain-switch dance can spuriously error
     const eth = window.ethereum;
     if (!eth) {
       setError("No wallet found. Install MetaMask (or a compatible wallet) to continue.");
@@ -123,7 +124,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setConnecting(false);
     }
-  }, [ensureStudioNetChain]);
+  }, [address, ensureStudioNetChain]);
 
   const disconnect = useCallback(() => {
     setAddress(null);
@@ -136,6 +137,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     const onAccountsChanged = (...args: unknown[]) => {
       const accounts = args[0] as string[];
       setAddress(normalizeAddress(accounts?.[0]));
+      setError(null);
     };
     const onChainChanged = (...args: unknown[]) => {
       setChainId(args[0] as string);

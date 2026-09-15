@@ -71,7 +71,7 @@ export function SiteHeader() {
           )}
         </div>
       </div>
-      {error && (
+      {error && !address && (
         <div className="mx-auto max-w-6xl px-6 pb-2 text-[0.75rem]" style={{ color: "var(--pc-red)" }}>
           {error}
         </div>
