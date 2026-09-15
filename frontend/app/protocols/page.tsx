@@ -1,9 +1,21 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useContractRead } from "@/hooks/useContractRead";
-import { getProtocol, getProtocolCount } from "@/lib/genlayer/contract";
-import { Panel, EmptyState, LoadingState, ErrorState, MonoId, SectionLabel } from "@/components/Primitives";
+import { useTxAction } from "@/hooks/useTxAction";
+import { useWallet } from "@/lib/wallet/WalletProvider";
+import { createProtocol, getProtocol, getProtocolCount } from "@/lib/genlayer/contract";
+import {
+  Panel,
+  PanelRaised,
+  EmptyState,
+  LoadingState,
+  ErrorState,
+  MonoId,
+  SectionLabel,
+} from "@/components/Primitives";
+import { TxStatusLine } from "@/components/TxStatus";
 import type { Protocol } from "@/lib/genlayer/types";
 
 async function loadAllProtocols(): Promise<Protocol[]> {
@@ -12,8 +24,83 @@ async function loadAllProtocols(): Promise<Protocol[]> {
   return Promise.all(ids.map((id) => getProtocol(id)));
 }
 
+function CreateProtocolForm({ onCreated }: { onCreated: () => void }) {
+  const { client, address, connect, hasProvider } = useWallet();
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [namespace, setNamespace] = useState("");
+  const tx = useTxAction(() => {
+    setName("");
+    setDescription("");
+    setNamespace("");
+    onCreated();
+  });
+
+  const canSubmit = name.trim().length > 0 && namespace.trim().length > 0;
+
+  return (
+    <PanelRaised className="mt-8">
+      <SectionLabel>Register a protocol</SectionLabel>
+      {!address ? (
+        <div className="flex items-center gap-3">
+          <p className="text-sm" style={{ color: "var(--pc-text-muted)" }}>
+            Connect a wallet to register a new protocol.
+          </p>
+          <button
+            onClick={connect}
+            className="pc-mono rounded-sm border px-3 py-1.5 text-[0.75rem] uppercase tracking-[0.06em]"
+            style={{ borderColor: "var(--pc-gold-dim)", color: "var(--pc-gold-bright)" }}
+          >
+            {hasProvider ? "Connect wallet" : "Check for wallet"}
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Protocol name"
+              className="pc-mono flex-1 rounded-sm border bg-transparent px-3 py-2 text-sm"
+              style={{ borderColor: "var(--pc-border-strong)" }}
+            />
+            <input
+              value={namespace}
+              onChange={(e) => setNamespace(e.target.value)}
+              placeholder="Canonical namespace (e.g. a domain)"
+              className="pc-mono flex-1 rounded-sm border bg-transparent px-3 py-2 text-sm"
+              style={{ borderColor: "var(--pc-border-strong)" }}
+            />
+          </div>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Description (optional)"
+            rows={2}
+            className="pc-mono mt-2 w-full rounded-sm border bg-transparent px-3 py-2 text-sm"
+            style={{ borderColor: "var(--pc-border-strong)" }}
+          />
+          <div className="mt-3">
+            <button
+              onClick={() =>
+                tx.run((c) => createProtocol(c, name.trim(), description.trim(), namespace.trim()), client)
+              }
+              disabled={!canSubmit || tx.snapshot.phase === "signing" || tx.snapshot.phase === "pending"}
+              className="pc-mono rounded-sm border px-4 py-2 text-[0.75rem] uppercase tracking-[0.06em] disabled:opacity-40"
+              style={{ borderColor: "var(--pc-gold-dim)", color: "var(--pc-gold-bright)" }}
+            >
+              Register protocol
+            </button>
+          </div>
+          <TxStatusLine snapshot={tx.snapshot} />
+        </>
+      )}
+    </PanelRaised>
+  );
+}
+
 export default function ProtocolsPage() {
-  const { status, data, error } = useContractRead(loadAllProtocols, []);
+  const { status, data, error, refetch } = useProtocolsData();
 
   return (
     <div>
@@ -58,6 +145,15 @@ export default function ProtocolsPage() {
           </div>
         )}
       </div>
+
+      <CreateProtocolForm onCreated={refetch} />
     </div>
   );
+}
+
+function useProtocolsData() {
+  const [reloadKey, setReloadKey] = useState(0);
+  const refetch = useCallback(() => setReloadKey((k) => k + 1), []);
+  const state = useContractRead(loadAllProtocols, [reloadKey]);
+  return { ...state, refetch };
 }
