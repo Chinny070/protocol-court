@@ -1,0 +1,151 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+ * Protocol Court Explorer -- design tokens.
+ * Selected template: HashiCorp (DESIGN.md), adapted per
+ * docs/STAGE_3_DESIGN_SELECTION.md -- obsidian surfaces, monochrome-first,
+ * gold reserved exclusively for finality/authority moments.
+ * ------------------------------------------------------------------------- */
+
+:root {
+  /* Surfaces -- layered obsidian, never a single flat black. */
+  --pc-bg: #0a0a0c;
+  --pc-surface-1: #111114;
+  --pc-surface-2: #17171b;
+  --pc-surface-3: #1e1e23;
+  --pc-border: #2a2a30;
+  --pc-border-strong: #3a3a42;
+
+  /* Text -- off-white on obsidian, monochrome-first. */
+  --pc-text: #ededf0;
+  --pc-text-muted: #a3a3ab;
+  --pc-text-faint: #6b6b74;
+
+  /* The one institutional accent: gold, reserved for finality/authority. */
+  --pc-gold: #c9a35a;
+  --pc-gold-bright: #e0bd7a;
+  --pc-gold-dim: #7a6438;
+
+  /* Cooler state colors -- used for everything that is NOT settled/final. */
+  --pc-blue: #6f9bd1;
+  --pc-blue-dim: #3f5877;
+  --pc-red: #d16f6f;
+  --pc-red-dim: #7a3f3f;
+  --pc-green: #7cba8f;
+  --pc-green-dim: #3f5f49;
+
+  /* Typography */
+  --pc-font-sans:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --pc-font-mono:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+
+  color-scheme: dark;
+}
+
+/* Artifact/host environments that force a light data-theme should not break
+ * this page -- Protocol Court's obsidian palette is a deliberate, permanent
+ * choice, not a light/dark toggle. */
+html {
+  background: var(--pc-bg);
+}
+
+body {
+  background: var(--pc-bg);
+  color: var(--pc-text);
+  font-family: var(--pc-font-sans);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--pc-gold-dim);
+  color: var(--pc-bg);
+}
+
+/* Reusable primitives, composed on top of Tailwind utility classes in
+ * components rather than duplicated as a giant token file. */
+
+.pc-mono {
+  font-family: var(--pc-font-mono);
+  font-variant-ligatures: none;
+}
+
+.pc-rule {
+  border-color: var(--pc-border);
+}
+
+.pc-panel {
+  background: var(--pc-surface-1);
+  border: 1px solid var(--pc-border);
+}
+
+.pc-panel-raised {
+  background: var(--pc-surface-2);
+  border: 1px solid var(--pc-border-strong);
+}
+
+/* Status pill vocabulary -- explorer/terminal texture, monochrome-first,
+ * gold reserved for FINALIZED only. */
+.pc-status {
+  font-family: var(--pc-font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.55rem;
+  border-radius: 2px;
+  border: 1px solid var(--pc-border-strong);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  white-space: nowrap;
+}
+
+.pc-status-neutral {
+  color: var(--pc-text-muted);
+}
+
+.pc-status-open {
+  color: var(--pc-blue);
+  border-color: var(--pc-blue-dim);
+}
+
+.pc-status-dispute {
+  color: var(--pc-red);
+  border-color: var(--pc-red-dim);
+}
+
+.pc-status-settled {
+  color: var(--pc-green);
+  border-color: var(--pc-green-dim);
+}
+
+.pc-status-final {
+  color: var(--pc-bg);
+  background: var(--pc-gold);
+  border-color: var(--pc-gold);
+  font-weight: 600;
+}
+
+/* Evidence-trail vertical rail, used for Commitment version history and
+ * Case lifecycle timelines. */
+.pc-rail {
+  position: relative;
+  padding-left: 1.5rem;
+  border-left: 1px solid var(--pc-border-strong);
+}
+
+.pc-rail-node::before {
+  content: "";
+  position: absolute;
+  left: -0.3125rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--pc-border-strong);
+  border: 1px solid var(--pc-bg);
+}
+
+.pc-rail-node-final::before {
+  background: var(--pc-gold);
+}

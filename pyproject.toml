@@ -1,0 +1,8 @@
+[project]
+name = "protocol-court"
+version = "0.1.0"
+description = "PROTOCOL COURT — the semantic precedent layer for Web3 (Stage 2: Intelligent Contract, no frontend)"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
