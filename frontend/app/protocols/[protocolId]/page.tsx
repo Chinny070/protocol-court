@@ -112,12 +112,18 @@ function CreateCommitmentForm({
             )
           }
           disabled={!canSubmit || busy}
+          title={canSubmit ? undefined : "Fill in title, version label, and authority URL first"}
           className="pc-mono rounded-sm border px-4 py-2 text-[0.75rem] uppercase tracking-[0.06em] disabled:opacity-40"
           style={{ borderColor: "var(--pc-gold-dim)", color: "var(--pc-gold-bright)" }}
         >
           Create commitment (draft)
         </button>
       </div>
+      {!canSubmit && (
+        <p className="mt-2 text-[0.75rem]" style={{ color: "var(--pc-text-faint)" }}>
+          Title, version label, and authority URL are required.
+        </p>
+      )}
       <TxStatusLine snapshot={tx.snapshot} />
     </PanelRaised>
   );
@@ -182,6 +188,7 @@ function DraftCommitmentEditor({
             )
           }
           disabled={!canAddClause || clauseBusy}
+          title={canAddClause ? undefined : "Fill in citation, title, and clause text first"}
           className="pc-mono rounded-sm border px-3 py-1.5 text-[0.75rem] uppercase tracking-[0.06em] disabled:opacity-40"
           style={{ borderColor: "var(--pc-gold-dim)", color: "var(--pc-gold-bright)" }}
         >

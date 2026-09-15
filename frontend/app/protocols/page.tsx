@@ -86,12 +86,18 @@ function CreateProtocolForm({ onCreated }: { onCreated: () => void }) {
                 tx.run((c) => createProtocol(c, name.trim(), description.trim(), namespace.trim()), client)
               }
               disabled={!canSubmit || tx.snapshot.phase === "signing" || tx.snapshot.phase === "pending"}
+              title={canSubmit ? undefined : "Fill in a name and namespace first"}
               className="pc-mono rounded-sm border px-4 py-2 text-[0.75rem] uppercase tracking-[0.06em] disabled:opacity-40"
               style={{ borderColor: "var(--pc-gold-dim)", color: "var(--pc-gold-bright)" }}
             >
               Register protocol
             </button>
           </div>
+          {!canSubmit && (
+            <p className="mt-2 text-[0.75rem]" style={{ color: "var(--pc-text-faint)" }}>
+              Name and canonical namespace are required.
+            </p>
+          )}
           <TxStatusLine snapshot={tx.snapshot} />
         </>
       )}
