@@ -1,10 +1,23 @@
 "use client";
 
-import { use } from "react";
+import { use, useCallback, useState } from "react";
 import Link from "next/link";
 import { useContractRead } from "@/hooks/useContractRead";
-import { getCase, getCaseIdsForClause, getClause, getCommitment } from "@/lib/genlayer/contract";
-import { Panel, EmptyState, LoadingState, ErrorState, MonoId, SectionLabel, CrumbLink } from "@/components/Primitives";
+import { useTxAction } from "@/hooks/useTxAction";
+import { useWallet } from "@/lib/wallet/WalletProvider";
+import { getCase, getCaseIdsForClause, getClause, getCommitment, fileCase } from "@/lib/genlayer/contract";
+import { FILING_BOND_ATTO } from "@/lib/genlayer/config";
+import {
+  Panel,
+  PanelRaised,
+  EmptyState,
+  LoadingState,
+  ErrorState,
+  MonoId,
+  SectionLabel,
+  CrumbLink,
+} from "@/components/Primitives";
+import { TxStatusLine } from "@/components/TxStatus";
 import { CaseStatusBadge } from "@/components/StatusBadge";
 import type { Case, Clause, Commitment } from "@/lib/genlayer/types";
 
@@ -17,9 +30,146 @@ async function loadClauseDetail(clauseId: string) {
   return { clause, commitment, cases } as { clause: Clause; commitment: Commitment; cases: Case[] };
 }
 
+function FileCaseForm({
+  clause,
+  commitment,
+  onFiled,
+}: {
+  clause: Clause;
+  commitment: Commitment;
+  onFiled: () => void;
+}) {
+  const { client, address, connect, hasProvider } = useWallet();
+  const [respondent, setRespondent] = useState("");
+  const [questionPresented, setQuestionPresented] = useState("");
+  const [disputedActRef, setDisputedActRef] = useState("");
+  const [disputedActSummary, setDisputedActSummary] = useState("");
+  const [topicTagsRaw, setTopicTagsRaw] = useState("");
+  const tx = useTxAction(() => {
+    setRespondent("");
+    setQuestionPresented("");
+    setDisputedActRef("");
+    setDisputedActSummary("");
+    setTopicTagsRaw("");
+    onFiled();
+  });
+
+  const canSubmit =
+    respondent.trim() &&
+    questionPresented.trim() &&
+    disputedActRef.trim() &&
+    disputedActSummary.trim();
+  const busy = tx.snapshot.phase === "signing" || tx.snapshot.phase === "pending";
+
+  return (
+    <PanelRaised className="mt-4">
+      <SectionLabel>File a case against this clause</SectionLabel>
+      <p className="mb-3 text-sm" style={{ color: "var(--pc-text-muted)" }}>
+        Filing requires a {Number(FILING_BOND_ATTO) / 1e18} GEN bond, refunded when the case
+        finalizes. The respondent is the address you allege acted inconsistently with this
+        clause — it cannot be your own connected address.
+      </p>
+      {!address ? (
+        <div className="flex items-center gap-3">
+          <p className="text-sm" style={{ color: "var(--pc-text-muted)" }}>
+            Connect a wallet to file a case.
+          </p>
+          <button
+            onClick={connect}
+            className="pc-mono rounded-sm border px-3 py-1.5 text-[0.75rem] uppercase tracking-[0.06em]"
+            style={{ borderColor: "var(--pc-gold-dim)", color: "var(--pc-gold-bright)" }}
+          >
+            {hasProvider ? "Connect wallet" : "Check for wallet"}
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input
+              value={respondent}
+              onChange={(e) => setRespondent(e.target.value)}
+              placeholder="Respondent address (0x…)"
+              className="pc-mono flex-1 rounded-sm border bg-transparent px-3 py-2 text-sm"
+              style={{ borderColor: "var(--pc-border-strong)" }}
+            />
+            <input
+              value={topicTagsRaw}
+              onChange={(e) => setTopicTagsRaw(e.target.value)}
+              placeholder="Topic tags, comma-separated (optional)"
+              className="pc-mono flex-1 rounded-sm border bg-transparent px-3 py-2 text-sm"
+              style={{ borderColor: "var(--pc-border-strong)" }}
+            />
+          </div>
+          <input
+            value={questionPresented}
+            onChange={(e) => setQuestionPresented(e.target.value)}
+            placeholder="Question presented (what should be adjudicated)"
+            className="pc-mono mt-2 w-full rounded-sm border bg-transparent px-3 py-2 text-sm"
+            style={{ borderColor: "var(--pc-border-strong)" }}
+          />
+          <input
+            value={disputedActRef}
+            onChange={(e) => setDisputedActRef(e.target.value)}
+            placeholder="Disputed act reference URL"
+            className="pc-mono mt-2 w-full rounded-sm border bg-transparent px-3 py-2 text-sm"
+            style={{ borderColor: "var(--pc-border-strong)" }}
+          />
+          <textarea
+            value={disputedActSummary}
+            onChange={(e) => setDisputedActSummary(e.target.value)}
+            placeholder="Summary of the disputed act"
+            rows={3}
+            className="pc-mono mt-2 w-full rounded-sm border bg-transparent px-3 py-2 text-sm"
+            style={{ borderColor: "var(--pc-border-strong)" }}
+          />
+          <div className="mt-3">
+            <button
+              onClick={() =>
+                tx.run(
+                  (c) =>
+                    fileCase(
+                      c,
+                      commitment.protocol_id,
+                      commitment.commitment_id,
+                      clause.clause_id,
+                      respondent.trim(),
+                      questionPresented.trim(),
+                      disputedActRef.trim(),
+                      disputedActSummary.trim(),
+                      topicTagsRaw
+                        .split(",")
+                        .map((t) => t.trim())
+                        .filter(Boolean),
+                      FILING_BOND_ATTO,
+                    ),
+                  client,
+                )
+              }
+              disabled={!canSubmit || busy}
+              title={canSubmit ? undefined : "Fill in respondent, question, act reference, and summary first"}
+              className="pc-mono rounded-sm border px-4 py-2 text-[0.75rem] uppercase tracking-[0.06em] disabled:opacity-40"
+              style={{ borderColor: "var(--pc-gold-dim)", color: "var(--pc-gold-bright)" }}
+            >
+              File case ({Number(FILING_BOND_ATTO) / 1e18} GEN)
+            </button>
+          </div>
+          {!canSubmit && (
+            <p className="mt-2 text-[0.75rem]" style={{ color: "var(--pc-text-faint)" }}>
+              Respondent, question presented, act reference, and summary are required.
+            </p>
+          )}
+          <TxStatusLine snapshot={tx.snapshot} />
+        </>
+      )}
+    </PanelRaised>
+  );
+}
+
 export default function ClauseDetailPage({ params }: { params: Promise<{ clauseId: string }> }) {
   const { clauseId } = use(params);
-  const { status, data, error } = useContractRead(() => loadClauseDetail(clauseId), [clauseId]);
+  const [reloadKey, setReloadKey] = useState(0);
+  const refetch = useCallback(() => setReloadKey((k) => k + 1), []);
+  const { status, data, error } = useContractRead(() => loadClauseDetail(clauseId), [clauseId, reloadKey]);
 
   return (
     <div>
@@ -60,6 +210,16 @@ export default function ClauseDetailPage({ params }: { params: Promise<{ clauseI
             <p className="mt-1 text-sm" style={{ color: "var(--pc-text-muted)" }}>
               Version → Case → Verdict → Precedent, in the order cases were filed against this clause.
             </p>
+
+            {data.commitment.status === "ACTIVE" ? (
+              <FileCaseForm clause={data.clause} commitment={data.commitment} onFiled={refetch} />
+            ) : (
+              <p className="mt-3 text-[0.75rem]" style={{ color: "var(--pc-text-faint)" }}>
+                Cases can only be filed against a sealed (ACTIVE) commitment version. This
+                clause&rsquo;s commitment is still {data.commitment.status}.
+              </p>
+            )}
+
             {data.cases.length === 0 ? (
               <div className="mt-4">
                 <EmptyState>No case has ever cited this clause.</EmptyState>
