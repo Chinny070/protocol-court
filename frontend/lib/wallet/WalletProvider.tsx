@@ -57,9 +57,27 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [chainId, setChainId] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasProvider] = useState(
+  const [hasProvider, setHasProvider] = useState(
     () => typeof window !== "undefined" && !!window.ethereum,
   );
+
+  useEffect(() => {
+    // window.ethereum is often injected by the wallet extension a tick after
+    // this component's first render, so the synchronous check above can miss
+    // it. Poll briefly for it rather than locking hasProvider to false forever.
+    if (hasProvider) return;
+    let attempts = 0;
+    const id = setInterval(() => {
+      attempts += 1;
+      if (window.ethereum) {
+        setHasProvider(true);
+        clearInterval(id);
+      } else if (attempts >= 20) {
+        clearInterval(id);
+      }
+    }, 100);
+    return () => clearInterval(id);
+  }, [hasProvider]);
 
   const ensureStudioNetChain = useCallback(async () => {
     const eth = window.ethereum;

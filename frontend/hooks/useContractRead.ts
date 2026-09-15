@@ -18,10 +18,17 @@ export function useContractRead<T>(
   deps: unknown[],
 ): ReadState<T> {
   const [state, setState] = useState<ReadState<T>>({ status: "loading", data: null, error: null });
+  const [lastDeps, setLastDeps] = useState(deps);
+
+  if (deps.length !== lastDeps.length || deps.some((d, i) => d !== lastDeps[i])) {
+    setLastDeps(deps);
+    if (state.status !== "loading") {
+      setState({ status: "loading", data: null, error: null });
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
-    setState({ status: "loading", data: null, error: null });
     fetcher()
       .then((data) => {
         if (!cancelled) setState({ status: "ready", data, error: null });

@@ -61,10 +61,10 @@ export function SiteHeader() {
           ) : (
             <button
               onClick={connect}
-              disabled={connecting || !hasProvider}
+              disabled={connecting}
               className="pc-mono rounded-sm border px-3 py-1.5 text-[0.75rem] uppercase tracking-[0.06em] disabled:opacity-50"
               style={{ borderColor: "var(--pc-gold-dim)", color: "var(--pc-gold-bright)" }}
-              title={hasProvider ? undefined : "No browser wallet detected"}
+              title={hasProvider ? undefined : "No browser wallet detected yet — click to check again"}
             >
               {connecting ? "Connecting…" : "Connect wallet"}
             </button>
