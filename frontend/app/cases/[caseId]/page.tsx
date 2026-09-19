@@ -20,6 +20,7 @@ import {
   submitEvidence,
 } from "@/lib/genlayer/contract";
 import { CHALLENGE_BOND_ATTO } from "@/lib/genlayer/config";
+import { canSubmitChallenge, prepareChallengeSubmission } from "@/lib/challengeSubmission";
 import {
   Panel,
   PanelRaised,
@@ -81,6 +82,7 @@ export default function CaseCourtroomPage({ params }: { params: Promise<{ caseId
   const [fetchMode, setFetchMode] = useState<"get" | "render">("get");
   const [ground, setGround] = useState<ChallengeGround>("IGNORED_EVIDENCE");
   const [citedEvidenceIds, setCitedEvidenceIds] = useState<string[]>([]);
+  const [citedPrecedentId, setCitedPrecedentId] = useState("");
   const [argument, setArgument] = useState("");
 
   const isParty = data && address && (address === data.kase.filer || address === data.kase.respondent);
@@ -330,6 +332,16 @@ export default function CaseCourtroomPage({ params }: { params: Promise<{ caseId
                       </label>
                     ))}
                   </div>
+                  {ground === "IMPLEMENTATION_CONTRADICTION" && (
+                    <input
+                      value={citedPrecedentId}
+                      onChange={(e) => setCitedPrecedentId(e.target.value)}
+                      placeholder="Cited precedent ID (for example, precedent-1)"
+                      aria-label="Cited precedent ID"
+                      className="pc-mono rounded-sm border bg-transparent px-3 py-2 text-sm"
+                      style={{ borderColor: "var(--pc-border-strong)" }}
+                    />
+                  )}
                   <textarea
                     value={argument}
                     onChange={(e) => setArgument(e.target.value)}
@@ -343,11 +355,21 @@ export default function CaseCourtroomPage({ params }: { params: Promise<{ caseId
                     onClick={() =>
                       challengeTx.run(
                         (c) =>
-                          openChallenge(c, data.kase.case_id, ground, citedEvidenceIds, "", argument, CHALLENGE_BOND_ATTO),
+                          openChallenge(
+                            c,
+                            ...prepareChallengeSubmission({
+                              caseId: data.kase.case_id,
+                              ground,
+                              citedEvidenceIds,
+                              citedPrecedentId,
+                              argument,
+                            }),
+                            CHALLENGE_BOND_ATTO,
+                          ),
                         client,
                       )
                     }
-                    disabled={!argument}
+                    disabled={!canSubmitChallenge({ ground, citedPrecedentId, argument })}
                   />
                 </div>
                 <TxStatusLine snapshot={challengeTx.snapshot} />
