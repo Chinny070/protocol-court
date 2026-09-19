@@ -14,6 +14,7 @@ import {
   getClause,
   getCommitment,
   getEvidence,
+  getPrecedentIdsForCommitment,
   getVerdict,
   openChallenge,
   resolveChallenge,
@@ -35,13 +36,7 @@ import {
 import { CaseStatusBadge, ChallengeStatusBadge, EvidenceStatusBadge } from "@/components/StatusBadge";
 import { TxStatusLine } from "@/components/TxStatus";
 import type { Case, Challenge, ChallengeGround, Clause, Commitment, Evidence, Verdict } from "@/lib/genlayer/types";
-
-const CHALLENGE_GROUNDS: ChallengeGround[] = [
-  "IGNORED_EVIDENCE",
-  "WRONG_TEMPORAL_INTERPRETATION",
-  "SOURCE_AUTHORITY_ERROR",
-  "IMPLEMENTATION_CONTRADICTION",
-];
+import { challengeGroundsForCase } from "@/lib/genlayer/challengeGrounds";
 
 interface CaseDetail {
   kase: Case;
@@ -51,19 +46,21 @@ interface CaseDetail {
   currentVerdict: Verdict | null;
   verdictHistory: Verdict[];
   challenges: Challenge[];
+  citablePrecedentIds: string[];
 }
 
 async function loadCaseDetail(caseId: string): Promise<CaseDetail> {
   const kase = await getCase(caseId);
-  const [commitment, clause, evidence, verdictHistory, challenges, currentVerdict] = await Promise.all([
+  const [commitment, clause, evidence, verdictHistory, challenges, currentVerdict, citablePrecedentIds] = await Promise.all([
     getCommitment(kase.commitment_id),
     getClause(kase.clause_id),
     Promise.all(kase.evidence_ids.map((id) => getEvidence(id))),
     Promise.all(kase.verdict_ids.map((id) => getVerdict(id))),
     Promise.all(kase.challenge_ids.map((id) => getChallenge(id))),
     kase.current_verdict_id ? getVerdict(kase.current_verdict_id) : Promise.resolve(null),
+    getPrecedentIdsForCommitment(kase.commitment_id),
   ]);
-  return { kase, commitment, clause, evidence, currentVerdict, verdictHistory, challenges };
+  return { kase, commitment, clause, evidence, currentVerdict, verdictHistory, challenges, citablePrecedentIds };
 }
 
 export default function CaseCourtroomPage({ params }: { params: Promise<{ caseId: string }> }) {
@@ -84,6 +81,8 @@ export default function CaseCourtroomPage({ params }: { params: Promise<{ caseId
   const [citedEvidenceIds, setCitedEvidenceIds] = useState<string[]>([]);
   const [citedPrecedentId, setCitedPrecedentId] = useState("");
   const [argument, setArgument] = useState("");
+
+  const availableGrounds = data ? challengeGroundsForCase(data.citablePrecedentIds.length > 0) : [];
 
   const isParty = data && address && (address === data.kase.filer || address === data.kase.respondent);
 
@@ -312,7 +311,7 @@ export default function CaseCourtroomPage({ params }: { params: Promise<{ caseId
                     className="pc-mono rounded-sm border bg-transparent px-2 py-2 text-sm"
                     style={{ borderColor: "var(--pc-border-strong)" }}
                   >
-                    {CHALLENGE_GROUNDS.map((g) => (
+                    {availableGrounds.map((g) => (
                       <option key={g} value={g}>{g.replace(/_/g, " ")}</option>
                     ))}
                   </select>
@@ -350,6 +349,11 @@ export default function CaseCourtroomPage({ params }: { params: Promise<{ caseId
                     className="rounded-sm border bg-transparent px-3 py-2 text-sm"
                     style={{ borderColor: "var(--pc-border-strong)" }}
                   />
+                  {ground === "IMPLEMENTATION_CONTRADICTION" && data.citablePrecedentIds.length === 0 && (
+                    <p className="text-xs" style={{ color: "var(--pc-red)" }}>
+                      This ground requires an existing precedent to cite. It is unavailable for this case.
+                    </p>
+                  )}
                   <ActionButton
                     label="Open challenge (1 GEN)"
                     onClick={() =>
