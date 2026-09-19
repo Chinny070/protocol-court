@@ -21,7 +21,7 @@ import {
   submitEvidence,
 } from "@/lib/genlayer/contract";
 import { CHALLENGE_BOND_ATTO } from "@/lib/genlayer/config";
-import { canSubmitChallenge, prepareChallengeSubmission } from "@/lib/challengeSubmission";
+import { canSubmitChallenge } from "@/lib/challengeSubmission";
 import {
   Panel,
   PanelRaised,
@@ -362,19 +362,13 @@ export default function CaseCourtroomPage({ params }: { params: Promise<{ caseId
                         (c) =>
                           openChallenge(
                             c,
-                            ...prepareChallengeSubmission({
-                              caseId: data.kase.case_id,
-                              ground,
-                              citedEvidenceIds,
-                              citedPrecedentId,
-                              argument,
-                            }),
+                            data.kase.case_id,
+                            ground,
+                            citedEvidenceIds,
+                            citedPrecedentId.trim(),
+                            argument,
                             CHALLENGE_BOND_ATTO,
                           ),
-                        client,
-                      )
-                    }
-                    disabled={!canSubmitChallenge({ ground, citedPrecedentId, argument })}
                         client,
                       )
                     }
