@@ -331,16 +331,6 @@ export default function CaseCourtroomPage({ params }: { params: Promise<{ caseId
                       </label>
                     ))}
                   </div>
-                  {ground === "IMPLEMENTATION_CONTRADICTION" && (
-                    <input
-                      value={citedPrecedentId}
-                      onChange={(e) => setCitedPrecedentId(e.target.value)}
-                      placeholder="Cited precedent ID (for example, precedent-1)"
-                      aria-label="Cited precedent ID"
-                      className="pc-mono rounded-sm border bg-transparent px-3 py-2 text-sm"
-                      style={{ borderColor: "var(--pc-border-strong)" }}
-                    />
-                  )}
                   <textarea
                     value={argument}
                     onChange={(e) => setArgument(e.target.value)}
@@ -353,6 +343,17 @@ export default function CaseCourtroomPage({ params }: { params: Promise<{ caseId
                     <p className="text-xs" style={{ color: "var(--pc-red)" }}>
                       This ground requires an existing precedent to cite. It is unavailable for this case.
                     </p>
+                  )}
+                  {ground === "IMPLEMENTATION_CONTRADICTION" && data.citablePrecedentIds.length > 0 && (
+                    <select
+                      value={citedPrecedentId}
+                      onChange={(e) => setCitedPrecedentId(e.target.value)}
+                      className="pc-mono rounded-sm border bg-transparent px-2 py-2 text-sm"
+                      style={{ borderColor: "var(--pc-border-strong)" }}
+                    >
+                      <option value="">Select the precedent this verdict contradicts</option>
+                      {data.citablePrecedentIds.map((id) => <option key={id} value={id}>{id}</option>)}
+                    </select>
                   )}
                   <ActionButton
                     label="Open challenge (1 GEN)"
@@ -370,6 +371,10 @@ export default function CaseCourtroomPage({ params }: { params: Promise<{ caseId
                             }),
                             CHALLENGE_BOND_ATTO,
                           ),
+                        client,
+                      )
+                    }
+                    disabled={!canSubmitChallenge({ ground, citedPrecedentId, argument })}
                         client,
                       )
                     }
