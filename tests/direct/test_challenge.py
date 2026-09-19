@@ -186,6 +186,37 @@ def test_open_challenge_implementation_contradiction_requires_precedent(direct_d
         _open_challenge(contract, direct_vm, case_id, evidence_id, ground="IMPLEMENTATION_CONTRADICTION", cited_evidence_ids=[])
 
 
+def test_open_implementation_contradiction_with_valid_precedent_succeeds(
+    direct_deploy, direct_accounts, direct_vm, direct_alice, direct_bob
+):
+    contract = _deploy(direct_deploy, direct_accounts)
+
+    precedent_case_id, _ = _setup_case_in_challenge_window(contract, direct_vm, direct_alice)
+    precedent_case = contract.get_case(precedent_case_id)
+    direct_vm.warp(precedent_case["challenge_window_ends_at"])
+    precedent_id = contract.finalize_case(precedent_case_id)
+    assert precedent_id == "precedent-1"
+
+    case_id, evidence_id = _setup_case_in_challenge_window(contract, direct_vm, direct_alice)
+    with direct_vm.prank(direct_bob):
+        challenge_id = _open_challenge(
+            contract,
+            direct_vm,
+            case_id,
+            evidence_id,
+            ground="IMPLEMENTATION_CONTRADICTION",
+            cited_evidence_ids=[],
+            cited_precedent_id=precedent_id,
+            argument="The current interpretation contradicts precedent-1.",
+        )
+
+    challenge = contract.get_challenge(challenge_id)
+    assert challenge["case_id"] == case_id
+    assert challenge["ground"] == "IMPLEMENTATION_CONTRADICTION"
+    assert challenge["cited_precedent_id"] == precedent_id
+    assert challenge["status"] == "OPEN"
+
+
 def test_open_challenge_cited_evidence_must_belong_to_case(direct_deploy, direct_accounts, direct_vm, direct_alice):
     contract = _deploy(direct_deploy, direct_accounts)
     case_a, evidence_a = _setup_case_in_challenge_window(contract, direct_vm, direct_alice)
